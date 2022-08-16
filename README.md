@@ -1,15 +1,14 @@
-USBtinLib
+USBtinSubProg
 =========
 
-USBtinLibDemo is an example Java minimal application which shows how to use
-USBtinLib, the Java Library for USBtin. USBtin is an USB to CAN interace
-(http://www.fischl.de/usbtin/).
+USBtinSubProg is a Java application to dump from and flash Subaru ECUs
+using USBtinLib, the Java Library for USBtin. USBtin is an open-source 
+USB to CAN interace (http://www.fischl.de/usbtin/).
 
 Build and run
 -------------
 
-Ant is used to build the application from Java source code. To run the demo
-program, type
+Ant is used to build the application from Java source code. To run the program, type
 ```
 ant run
 ```
@@ -22,7 +21,7 @@ ant jar
 License
 -------
 
-Copyright (C) 2014  Thomas Fischl (http://www.fischl.de)
+Copyright (C) 2022  rimwall
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
