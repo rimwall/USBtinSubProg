@@ -1,0 +1,50 @@
+Notes on operation of Denso CAN bootloader
+	- the bootloader uses CAN EXTID of 0x3FFFE
+	- max of 8 bytes of message data are transferred in each CAN frame
+	- bootloader access is enabled via message data of 0xFF 0x86 0x00 0x00 0x00 0x00 0x00 0x00
+	- bootloader access can be gained at startup, or during ECU operation using the above CAN message
+	- the bootloader has a 100 x 8 byte buffer to manage timing differences between data receipt and data processing
+	- communication with the bootloader is via max 8 byte data messages that follow this format:
+		- 1st byte: 0x7A
+		- 2nd byte: command + data length byte
+		- 3rd to 8th bytes: data bytes
+	- the command byte is structured so the first 5 bits are the command, and the last 3 bits is the data length
+	- commands are as follows
+		- 0x98: set copy destination for kernel
+			- syntax: 0x7A 0x9C 0xA1 0xA2 0xA3 0xA4
+			- Note: 0x9C = 0x98 + 0x04
+			- sets the Stack Pointer (0xFFFFBFA0) to address 0x[A1][A2][A3][A4]
+		- 0xA8: transfer data to RAM
+			- syntax: 0x7A 0xA8 + Len 0xD1 0xD2 0xD3 0xD4 0xD5 0xD6
+			- Note: Len is length of data (so values of 1 to 6)
+			- copies Len bytes to current copy destination
+			- on first call, the current copy destination is set to the value at the Stack Pointer
+			- copy destination is checked to be within RAM (ie: between 0xFFFF0000 and 0xFFFFBFFF)
+		- 0xB0: report kernel checksum in RAM
+			- syntax: 0x7A 0xB4 0xA1 0xA2 0xA3 0xA4
+			- Note: 0xB4 = 0xB0 + 0x04
+			- reports the checksum over the range kernel start (in the Stack Pointer) to address 0x[A1][A2][A3][A4]
+			- the checksum is calculated as the simple addition, with overflows rightshifted by 8 bits and added to the checksum
+		- 0xA0: jump to kernel
+			- syntax 0x7A 0xA4 0xA1 0xA2 0xA3 0xA4
+			- Note: 0xA4 = 0xA0 + 0x04
+			- sets 0xFFFFBFA4 to 0x[A1][A2][A3][A4] as the end of the kernel (although this is not used anywhere)
+			- Execution jumps to the kernel start (in the Stack Pointer)
+		- 0xC8: exit bootloader and restart ECU
+			- syntax: 0xFF 0xC8
+			- allows external watchdog to restart ECU
+		- 0x90: report some ECU information
+			- syntax: 0x7A 0x90
+			- reports 6 bytes which appear related to car manufacturer, ECU type or capability (eg: 0x11 0x23 0x20 0x17 0x60 0x35) which would allow the Denso bootloader application to select the correct kernel
+		- 0x88: report some ECU information
+			- syntax: 0x7A 0x88
+			- reports 6 bytes of 0x00
+		- 0xC0: report some ECU information
+			- syntax: 0x7A 0xC0
+			- reports 6 bytes which appear related to car manufacturer, ECU type or capability (eg: 0x50 0x79 0x77 0x30 0x24 0x41) which would allow the Denso bootloader application to select the correct kernel
+	- reponses from the bootloader come in max 8 byte messages that follow this format:
+		- 1st byte: 0x7A
+		- 2nd byte: echo of command + data length
+		- 3rd to 8th bytes: data bytes
+			
+		
