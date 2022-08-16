@@ -1,21 +1,37 @@
 USBtinSubProg
-=========
+=============
 
 USBtinSubProg is a Java application to dump from and flash Subaru ECUs
 using USBtinLib, the Java Library for USBtin. USBtin is an open-source 
 USB to CAN interace (http://www.fischl.de/usbtin/).
 
+It requires a kernel for the specific Subaru ECU. Kernels can be obtained
+from https://github.com/rimwall/npkern/tree/ssm_can_test/precompiled
+The kernels are based on npkern by fenurgrec (https://github.com/fenugrec)
+
+Status
+------
+
+Currently experimental status. Flashing has been successfully performed
+on the bench of a 7058 ECU.
+
+CAN bootloader
+---------------------
+
+Details of its operation are in "Denso CAN bootloader.txt" 
+
+
 Build and run
 -------------
-
-Ant is used to build the application from Java source code. To run the program, type
-```
-ant run
-```
 
 To create a JAR file use
 ```
 ant jar
+```
+
+To run use
+```
+java -jar USBtinSubProg.jar [kernel file name]
 ```
 
 License
