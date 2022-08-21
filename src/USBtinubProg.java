@@ -39,8 +39,9 @@ public class USBtinSubProg implements CANMessageListener {
     static final int ECUID = 0x21;
 	static int checkSum;
 	static AccessStatus currentStatus = AccessStatus.NO_COMMS;
-	static byte dumpBytes[] = new byte[1048576];
-	static int dumpByteCounter;
+	static byte dumpBytes[] = new byte[256];
+	static int dumpByteCounter, dumpTimeOut;
+	static boolean dumpingBlocks = false;
 										 
     /**
      * This method is called every time a CAN message is received.
@@ -61,12 +62,22 @@ public class USBtinSubProg implements CANMessageListener {
 			
 			//System.out.println("rspAll: " + (rspAll[0] & 0xFF) + " " + (rspAll[1] & 0xFF) + " " + (rspAll[2] & 0xFF) + " " + (rspAll[3] & 0xFF) + " " + (rspAll[4] & 0xFF) + " " + (rspAll[5] & 0xFF) + " " + (rspAll[6] & 0xFF) + " " + (rspAll[7] & 0xFF));
 			
-			rspCode = (byte) (rspAll[1] & 0xF8);   // top 5 bits is the code
-			rspDataLength = (byte) (rspAll[1] & 0x07);   // bottom 3 bits is the data length
+			if (dumpingBlocks) {
+				
+				for (i = 0; i < 8; i++) {
+					
+					dumpBytes[dumpByteCounter] = rspAll[i];
+					dumpByteCounter++;
+					dumpTimeOut = 0;
+					
+				}
+				
+			}
+			
+			else if (rspAll[0] == (byte) 0x7A) {   // first byte should be 0x7A
 
-			if (rspAll[0] == (byte) 0x7A) {   // first byte should be 0x7A
-
-				//System.out.println("0x7A response received, rspCode: " + (rspCode & 0xFF) + " rspDataLength: " + rspDataLength);
+				rspCode = (byte) (rspAll[1] & 0xF8);   // top 5 bits is the code
+				rspDataLength = (byte) (rspAll[1] & 0x07);   // bottom 3 bits is the data length//System.out.println("0x7A response received, rspCode: " + (rspCode & 0xFF) + " rspDataLength: " + rspDataLength);
 
 				switch(rspCode) {
 					case (byte) 0x88 :
@@ -107,11 +118,13 @@ public class USBtinSubProg implements CANMessageListener {
 						break;
 					case (byte) 0xD8 :
 						// Kernel: handle response to ROM dump command
-						//System.out.println("0xD8 response received, length " + rspDataLength);
-						for (i = 2; i < (rspDataLength + 2); i++) {
-							dumpBytes[dumpByteCounter] = rspAll[i];
-							dumpByteCounter++;
-						}
+						System.out.println("0xD8 response received, length " + rspDataLength);
+						//for (i = 2; i < (rspDataLength + 2); i++) {
+						//	dumpBytes[dumpByteCounter] = rspAll[i];
+						//	dumpByteCounter++;
+						//	dumpTimeOut = 0;
+						//}
+						dumpingBlocks = true;
 						break;
 					case (byte) 0xE0 :
 						// Kernel: response to initialise erasing / flashing microcodes command
@@ -138,7 +151,7 @@ public class USBtinSubProg implements CANMessageListener {
 			}
 
 			else if (rspAll[0] == (byte) 0x7F) {
-				System.out.println("0x7F response received, rspCode: " + (rspCode & 0xFF) + " error code: " + (rspAll[2] & 0xFF));
+				System.out.println("0x7F response received, rspCode: " + ((rspAll[1] & 0xF8) & 0xFF) + " error code: " + (rspAll[2] & 0xFF));
 
 				switch(rspAll[2]) {
 					case (byte) 0x30 :
@@ -344,7 +357,7 @@ public class USBtinSubProg implements CANMessageListener {
 				usbtin.send(cantxmsg);
 				System.out.print("\r0xA8 message sent to bootloader to load kernel for block:  " + i);
 							
-				wait(5);
+				wait(20);
 
 			}
 							
@@ -379,6 +392,7 @@ public class USBtinSubProg implements CANMessageListener {
 
 			boolean exitFlag = false;
 			boolean realFlashFlag = false;
+			boolean timeOutFlag = false;
 
 			Scanner cli = new Scanner(System.in);
 
@@ -405,58 +419,78 @@ public class USBtinSubProg implements CANMessageListener {
 						dumpLength &= 0xFFFFFF00;
 						System.out.println("dumpLength: " + dumpLength);
 						if ((dumpLength <= 0) || (dumpLength > 1048576)) throw new USBtinException("Dump length invalid"); 
-						
-						// send 0xD0 command to kernel to get checksum of dump
-						msgAll[0] = (byte) 0x7A;
-						msgAll[1] = (byte) (0xD0 + 0x06);
-						msgAll[2] = (byte) ((dumpLength >> 24) & 0xFF);
-						msgAll[3] = (byte) ((dumpLength >> 16) & 0xFF);
-						msgAll[4] = (byte) ((dumpLength >> 8) & 0xFF);
-						msgAll[5] = (byte) ((dumpStart >> 24) & 0xFF);
-						msgAll[6] = (byte) ((dumpStart >> 16) & 0xFF);
-						msgAll[7] = (byte) ((dumpStart >> 8) & 0xFF);			
-						cantxmsg.setData(msgAll);
-						usbtin.send(cantxmsg);
-						//System.out.println("msgAll: " + msgAll[0] + " " + msgAll[1] + " " + msgAll[2] + " " + msgAll[3] + " " + msgAll[4] + " " + msgAll[5] + " " + msgAll[6] + " " + msgAll[7]);
-						System.out.println("0xD0 message sent to kernel to get checksum over dump region");						
-
-						dumpByteCounter = 0;
-
-						// send 0xD8 command to kernel to dump from ROM
-						msgAll[0] = (byte) 0x7A;
-						msgAll[1] = (byte) (0xD8 + 0x06);
-						msgAll[2] = (byte) ((dumpLength >> 24) & 0xFF);
-						msgAll[3] = (byte) ((dumpLength >> 16) & 0xFF);
-						msgAll[4] = (byte) ((dumpLength >> 8) & 0xFF);
-						msgAll[5] = (byte) ((dumpStart >> 24) & 0xFF);
-						msgAll[6] = (byte) ((dumpStart >> 16) & 0xFF);
-						msgAll[7] = (byte) ((dumpStart >> 8) & 0xFF);			
-						cantxmsg.setData(msgAll);
-						usbtin.send(cantxmsg);
-						//System.out.println("msgAll: " + msgAll[0] + " " + msgAll[1] + " " + msgAll[2] + " " + msgAll[3] + " " + msgAll[4] + " " + msgAll[5] + " " + msgAll[6] + " " + msgAll[7]);
-						System.out.println("0xD8 message sent to kernel initiate dump");						
-
-						// wait for all data to be received
-						while(dumpByteCounter < dumpLength) {
-							System.out.print("\rdumpByteCounter: " + dumpByteCounter);
-						};  
-						
 						byte writeBytes[] = new byte[dumpLength];
-						int writeCheckSum = 0;
-						for (i = 0; i < dumpLength; i++) {
-							writeBytes[i] = dumpBytes[i];
-							writeCheckSum += (writeBytes[i] & 0xFF);               
-							writeCheckSum = ((writeCheckSum >> 8) & 0xFF) + (writeCheckSum & 0xFF);
-						}
+						
+						int dumpChunks = dumpLength / 256;
+						System.out.println("dumpChunks: " + dumpChunks);
 
-						if (writeCheckSum != checkSum) System.out.println("dump checksum error, not saving to dump file");
-						else {
-							System.out.println("dump checksum ok, writing to dump file");
-							File file = new File(dumpFile);
-							file.createNewFile();
-							Files.write(Path.of(dumpFile), writeBytes);
-						}
+						dumpLength = 256;
+						for (i = 0; i < dumpChunks; i++) {
+						
+							// send 0xD0 command to kernel to get checksum of dump chunk
+							msgAll[0] = (byte) 0x7A;
+							msgAll[1] = (byte) (0xD0 + 0x06);
+							msgAll[2] = (byte) ((dumpLength >> 24) & 0xFF);
+							msgAll[3] = (byte) ((dumpLength >> 16) & 0xFF);
+							msgAll[4] = (byte) ((dumpLength >> 8) & 0xFF);
+							msgAll[5] = (byte) ((dumpStart >> 24) & 0xFF);
+							msgAll[6] = (byte) ((dumpStart >> 16) & 0xFF);
+							msgAll[7] = (byte) ((dumpStart >> 8) & 0xFF);			
+							cantxmsg.setData(msgAll);
+							usbtin.send(cantxmsg);
+							//System.out.println("msgAll: " + msgAll[0] + " " + msgAll[1] + " " + msgAll[2] + " " + msgAll[3] + " " + msgAll[4] + " " + msgAll[5] + " " + msgAll[6] + " " + msgAll[7]);
+							System.out.println("0xD0 message sent to kernel to get checksum over dump region");						
+
+							dumpByteCounter = 0;
+
+							// send 0xD8 command to kernel to dump the chunk from ROM
+							msgAll[0] = (byte) 0x7A;
+							msgAll[1] = (byte) (0xD8 + 0x06);
+							msgAll[2] = (byte) ((dumpLength >> 24) & 0xFF);
+							msgAll[3] = (byte) ((dumpLength >> 16) & 0xFF);
+							msgAll[4] = (byte) ((dumpLength >> 8) & 0xFF);
+							msgAll[5] = (byte) ((dumpStart >> 24) & 0xFF);
+							msgAll[6] = (byte) ((dumpStart >> 16) & 0xFF);
+							msgAll[7] = (byte) ((dumpStart >> 8) & 0xFF);			
+							cantxmsg.setData(msgAll);
+							usbtin.send(cantxmsg);
+							//System.out.println("msgAll: " + msgAll[0] + " " + msgAll[1] + " " + msgAll[2] + " " + msgAll[3] + " " + msgAll[4] + " " + msgAll[5] + " " + msgAll[6] + " " + msgAll[7]);
+							System.out.println("0xD8 message sent to kernel initiate dump");						
+
+							// wait for all data in the chunk to be received
+							dumpTimeOut = 0;
+							timeOutFlag = false;
+							while((dumpByteCounter < dumpLength) && !timeOutFlag) {
+								System.out.print("\rdumpByteCounter: " + ((i * 256) + dumpByteCounter));
+								dumpTimeOut++;
+								if (dumpTimeOut > 50000) timeOutFlag = true; 
+							};  
 					
+							int writeCheckSum = 0;
+							for (j = 0; j < dumpLength; j++) {
+								writeBytes[(i * 256) + j] = dumpBytes[j];
+								writeCheckSum += (dumpBytes[j] & 0xFF);               
+								writeCheckSum = ((writeCheckSum >> 8) & 0xFF) + (writeCheckSum & 0xFF);
+							}
+
+							if ((writeCheckSum != checkSum) || timeOutFlag) {
+								System.out.println("dump timed out or had a checksum error, repeating 256 byte chunk");
+								i--;
+							} 
+							else {
+								System.out.println("dump checksum ok for chunk: " + i + " moving to next chunk");
+								dumpStart += 256;
+							}
+						
+							dumpingBlocks = false;
+							
+						}
+						
+						System.out.println("all chunks dumped, writing to dump file");
+						File file = new File(dumpFile);
+						file.createNewFile();
+						Files.write(Path.of(dumpFile), writeBytes);
+						
 						break;
 					
 					case "rflash" :
@@ -642,3 +676,4 @@ public class USBtinSubProg implements CANMessageListener {
         }
     }
 }
+
