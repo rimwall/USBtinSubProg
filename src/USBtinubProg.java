@@ -2,7 +2,7 @@
  * Application based on USBtinLibDemo and using USBtinLib, the Java Library for USBtin
  * http://www.fischl.de/usbtin
  *
- * Copyright (C) 2014  rimwall 
+ * Copyright (C) 2022  rimwall 
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -168,6 +168,9 @@ public class USBtinSubProg implements CANMessageListener {
 						break;
 					case (byte) 0x35 :
 						System.out.println("Kernel response indicates error: unrecognised non-0x7A message");
+						break;
+					case (byte) 0x36 :
+						System.out.println("Kernel response indicates error: received message was overwritten before being read");
 						break;
 					case (byte) 0xA8 :
 					case (byte) 0xA9 :
@@ -465,6 +468,8 @@ public class USBtinSubProg implements CANMessageListener {
 								dumpTimeOut++;
 								if (dumpTimeOut > 50000) timeOutFlag = true; 
 							};  
+							
+							//System.out.println("dumpByteCounter: " + dumpByteCounter);
 					
 							int writeCheckSum = 0;
 							for (j = 0; j < dumpLength; j++) {
@@ -676,4 +681,3 @@ public class USBtinSubProg implements CANMessageListener {
         }
     }
 }
-
