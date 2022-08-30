@@ -41,7 +41,9 @@ The key should be in the ignition, and the key turned to 'on' (engine NOT runnin
 
 Connect any green 'test connectors' (does not exist on most CAN vehicles).
 
-Connect the CAN-H and CAN-L lines from the USBtin to the correct pins on the OBD connector. Connect the USBtin to the USB port on your computer. Make note of the port number that is allocated to the USBtin by your operating system. Edit the java application (line 287) so that the COM port details are correct.
+A USBtin is required. See http://www.fischl.de/usbtin/
+
+You can either build your own USBtin for purchase one from the website. Connect the CAN-H and CAN-L lines from the USBtin to the correct pins on the OBD connector. Connect the USBtin to the USB port on your computer. Make note of the port number that is allocated to the USBtin by your operating system. Edit the java application (line 287) so that the COM port details are correct.
 
 Ensure you have a copy of the kernel file in the same directory that USBtinSubProg is launched. The kernel file is available here: https://github.com/rimwall/npkern/tree/ssm_can_test/precompiled
 
