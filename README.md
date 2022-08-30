@@ -34,6 +34,35 @@ To run use
 java -jar USBtinSubProg.jar [kernel file name]
 ```
 
+Hardware Setup
+--------------
+
+The key should be in the ignition, and the key turned to 'on' (engine NOT running). Maintaining battery voltage is important, particularly during flashing - you may wish to have a battery maintainer connected.
+
+Connect any green 'test connectors' (does not exist on most CAN vehicles).
+
+Connect the CAN-H and CAN-L lines from the USBtin to the correct pins on the OBD connector. Connect the USBtin to the USB port on your computer. Make note of the port number that is allocated to the USBtin by your operating system. Edit the java application (line 287) so that the COM port details are correct.
+
+Ensure you have a copy of the kernel file in the same directory that USBtinSubProg is launched. The kernel file is available here: https://github.com/rimwall/npkern/tree/ssm_can_test/precompiled
+
+So far, only a SH7058 kernel has been compiled. Others can be compiled if required.
+
+Running USBtinSubProg
+---------------------
+
+Run as described above. The application will attempt to load and activate the kernel. After that, 4 simple commands are possible via a CLI:
+- dump - will dump the ROM contents as per the prompts
+- pflash - practice flash - will follow the same process as flashing, but flashing will not actually be activated
+- rflash - real flash - will attempt to flash the ECU
+- exit - will terminate the kernel, reset the ECU and exit USBtinSubProg
+
+Error handling is rudimentary. Some errors are not handled properly, if this occurs the application may need to be closed and the USBtin may need to be disconnected and reconnected from the USB port.
+
+Risks
+-----
+
+This is experimental software, and you use it at your own risk. You may brick your ECU.
+
 License
 -------
 
