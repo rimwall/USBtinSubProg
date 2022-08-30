@@ -65,6 +65,8 @@ Risks
 
 This is experimental software, and you use it at your own risk. You may brick your ECU.
 
+First, try a dump and review the output to ensure it was successful. Then, if you wish, progress to a practice flash and a real flash. Avoid flashing the first 0x1000 bytes of your ECU (as this should allow reloading of the CAN kernel if you need to rectify any problems). If you flash a ROM, ensure it the new ROM is checksum corrected (this is something RomRaider can do).
+
 License
 -------
 
