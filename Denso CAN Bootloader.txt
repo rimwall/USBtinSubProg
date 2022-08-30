@@ -1,5 +1,5 @@
 Notes on operation of Denso CAN bootloader
-	- the bootloader uses CAN EXTID of 0x3FFFE
+	- the bootloader uses CAN EXTID of 0xFFFFE
 	- max of 8 bytes of message data are transferred in each CAN frame
 	- bootloader access is enabled via message data of 0xFF 0x86 0x00 0x00 0x00 0x00 0x00 0x00
 	- bootloader access can be gained at startup, or during ECU operation using the above CAN message
